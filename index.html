@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    text-align: center;
+    padding: 30px;
+}
+
+h1 {
+    font-size: 3em;
+    color: #ffcc00;
+    text-shadow: 2px 2px 5px #aaa;
+    margin-bottom: 30px;
+}
+
+#coin {
+    font-size: 100px;
+    cursor: pointer;
+    user-select: none;
+    display: inline-block;
+    transition: transform 0.1s;
+}
+
+@keyframes popIn {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.pop {
+    animation: popIn 0.15s ease-out;
+}
+
+.upgrade-btn {
+    padding: 12px 20px;
+    margin: 10px;
+    background: linear-gradient(145deg, #ffd700, #ffcc00);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: bold;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    transition: background 0.2s, transform 0.1s;
+}
+
+.upgrade-btn:hover {
+    background: linear-gradient(145deg, #ffcc00, #ffb800);
+    transform: scale(1.05);
+}
+
+.stat {
+    margin: 10px 0;
+    font-size: 18px;
+    padding: 6px 12px;
+    background: #fff8dc;
+    border-radius: 10px;
+    display: inline-block;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#xp-container {
+    width: 300px;
+    height: 20px;
+    background: #ddd;
+    border-radius: 10px;
+    margin: 15px auto;
+    overflow: hidden;
+}
+
+#xp-bar {
+    height: 100%;
+    width: 0%;
+    background: #4caf50;
+    transition: width 0.2s ease-out;
+}
+
+/* Feedback box */
+#feedback-box {
+    margin-top: 40px;
+    text-align: left;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+    background:#fff;
+    padding:20px;
+    border-radius:12px;
+    box-shadow:0 6px 16px rgba(0,0,0,0.15);
+}
+#feedback-box textarea {
+    width:100%;
+    padding:8px;
+    margin:6px 0;
+    border-radius:6px;
+    border:1px solid #ccc;
+}
+#feedback-box button {
+    padding:10px 16px;
+    background:#4caf50;
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+    transition: background 0.2s, transform 0.1s;
+}
+#feedback-box button:hover {
+    background:#45a049;
+    transform: scale(1.05);
+}
+</style>
+</head>
+<body>
+
+<h1>💲Currency clicker💲</h1>
+
+<div id="coin">🪙</div>
+
+<div class="stat">Coins: <span id="coins">0</span></div>
+<div class="stat">Level: <span id="level">1</span></div>
+
+<div id="xp-container">
+    <div id="xp-bar"></div>
+</div>
+<div class="stat">XP: <span id="xp">0</span> / <span id="xpNeeded">10</span></div>
+
+<div id="shop">
+    <button id="powerUp" class="upgrade-btn">
+        Koop Click Power (+1) — <span id="powerCost">100</span> coins
+    </button><br>
+
+    <button id="autoUp" class="upgrade-btn">
+        Koop Auto-Click — <span id="autoCost">200</span> coins
+    </button><br>
+
+    <button id="rebirthBtn" class="upgrade-btn">
+        Rebirth — <span id="rebirthCost">1000000</span> coins
+    </button>
+</div>
+
+<!-- FEEDBACK BOX -->
+<div id="feedback-box">
+  <h2>Feedback sturen</h2>
+  <form action="https://formspree.io/f/myzrnbqq" method="POST" target="_blank">
+    <label for="feedback">Feedback:</label><br>
+    <textarea id="feedback" name="feedback" rows="5" required></textarea><br>
+
+    <button type="submit">Verstuur Feedback</button>
+  </form>
+</div>
+
+<script>
+    let coins = 0;
+    let xp = 0;
+    let level = 1;
+    let xpNeeded = 10;
+
+    let clickPower = 1;
+    let autoClick = false;
+
+    let powerCost = 100;
+    let autoCost = 200;
+
+    let rebirths = 0;
+    let rebirthCost = 1000000;
+    let rebirthMultiplier = 0;
+
+    const coin = document.getElementById("coin");
+    const coinsText = document.getElementById("coins");
+    const xpText = document.getElementById("xp");
+    const xpNeedText = document.getElementById("xpNeeded");
+    const levelText = document.getElementById("level");
+    const xpBar = document.getElementById("xp-bar");
+
+    const powerBtn = document.getElementById("powerUp");
+    const autoBtn = document.getElementById("autoUp");
+    const rebirthBtn = document.getElementById("rebirthBtn");
+
+    const powerCostText = document.getElementById("powerCost");
+    const autoCostText = document.getElementById("autoCost");
+    const rebirthCostText = document.getElementById("rebirthCost");
+
+    function render() {
+        coinsText.textContent = Math.floor(coins);
+        xpText.textContent = xp;
+        xpNeedText.textContent = xpNeeded;
+        levelText.textContent = level;
+        xpBar.style.width = (xp / xpNeeded) * 100 + "%";
+        powerCostText.textContent = powerCost;
+        autoCostText.textContent = autoCost;
+        rebirthCostText.textContent = rebirthCost;
+    }
+
+    function playPop(el) {
+        el.classList.remove("pop");
+        void el.offsetWidth;
+        el.classList.add("pop");
+    }
+
+    function levelUp() {
+        level++;
+        xp = 0;
+        xpNeeded = Math.floor(xpNeeded * 1.4);
+        clickPower += 1;
+        coins += level * 10;
+    }
+
+    function gainXP(amount) {
+        xp += amount;
+        if (xp >= xpNeeded) levelUp();
+    }
+
+    function saveGame() {
+        const saveData = {
+            coins, xp, level, xpNeeded,
+            clickPower, autoClick,
+            powerCost, autoCost,
+            rebirths, rebirthCost, rebirthMultiplier
+        };
+        localStorage.setItem("clickerSave", JSON.stringify(saveData));
+    }
+
+    function loadGame() {
+        const saved = JSON.parse(localStorage.getItem("clickerSave"));
+        if (saved) {
+            coins = saved.coins;
+            xp = saved.xp;
+            level = saved.level;
+            xpNeeded = saved.xpNeeded;
+            clickPower = saved.clickPower;
+            autoClick = saved.autoClick;
+            powerCost = saved.powerCost;
+            autoCost = saved.autoCost;
+            rebirths = saved.rebirths;
+            rebirthCost = saved.rebirthCost;
+            rebirthMultiplier = saved.rebirthMultiplier;
+
+            if (autoClick) {
+                setInterval(() => {
+                    coins += clickPower;
+                    gainXP(0.5);
+                    render();
+                    saveGame();
+                }, 1000);
+            }
+        }
+    }
+
+    // CLICK
+    coin.addEventListener("click", () => {
+        coins += clickPower;
+        gainXP(0.5);
+        playPop(coin);
+        render();
+        saveGame();
+    });
+
+    // Click Power Upgrade
+    powerBtn.addEventListener("click", () => {
+        if (coins >= powerCost) {
+            coins -= powerCost;
+            clickPower++;
+            powerCost = Math.floor(powerCost * 1.5);
+            playPop(powerBtn);
+            render();
+            saveGame();
+        }
+    });
+
+    // Auto-Click Upgrade
+    autoBtn.addEventListener("click", () => {
+        if (coins >= autoCost) {
+            coins -= autoCost;
+            autoCost = Math.floor(autoCost * 2);
+            if (!autoClick) {
+                autoClick = true;
+                setInterval(() => {
+                    coins += clickPower;
+                    gainXP(0.5);
+                    render();
+                    saveGame();
+                }, 1000);
+            }
+            playPop(autoBtn);
+            render();
+            saveGame();
+        }
+    });
+
+    // Rebirth
+    rebirthBtn.addEventListener("click", () => {
+        if (coins >= rebirthCost) {
+            coins -= rebirthCost;
+            rebirths++;
+            rebirthMultiplier += 0.5;
+
+            coins = 0;
+            xp = 0;
+            level = 1;
+            xpNeeded = 10;
+            clickPower = 1 + rebirthMultiplier;
+            autoClick = false;
+            powerCost = 100;
+            autoCost = 200;
+
+            rebirthCost = Math.floor(rebirthCost * 2);
+
+            playPop(rebirthBtn);
+            render();
+            saveGame();
+        }
+    });
+
+    window.onload = () => {
+        loadGame();
+        render();
+    };
+</script>
+
+</body>
+</html>
